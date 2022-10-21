@@ -1,3 +1,4 @@
+
 resource "aws_cur_report_definition" "this" {
   report_name                = var.report_name
   time_unit                  = var.report_frequency
@@ -50,24 +51,31 @@ resource "aws_kms_alias" "s3" {
 # tfsec:ignore:AWS077 tfsec:ignore:AWS002
 resource "aws_s3_bucket" "cur" {
   count = var.use_existing_s3_bucket ? 0 : 1
-
   bucket = var.s3_bucket_name
-  acl    = "private"
+  tags = var.tags
+}
 
-  versioning {
-    enabled = false
+resource "aws_s3_bucket_versioning" "cur_versioning" {
+  bucket = aws_s3_bucket.cur[0].id
+  versioning_configuration {
+    status = "Enabled"
   }
+}
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        kms_master_key_id = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
-        sse_algorithm     = "aws:kms"
-      }
+resource "aws_s3_bucket_acl" "cur_acl" {
+  bucket = aws_s3_bucket.cur[0].id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "cur_encrypt" {
+  bucket = aws_s3_bucket.cur[0].id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      kms_master_key_id = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
+      sse_algorithm     = "aws:kms"
     }
   }
-
-  tags = var.tags
 }
 
 resource "aws_s3_bucket_public_access_block" "cur" {
