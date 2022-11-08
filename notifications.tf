@@ -1,3 +1,5 @@
+#TODO : Consider  deadletter queues. Code signing
+
 locals {
   lambda_function_name = "${var.report_name}-crawler-trigger"
 }
@@ -20,6 +22,10 @@ resource "aws_s3_bucket_notification" "cur" {
 }
 
 resource "aws_lambda_function" "run_crawler" {
+	# checkov:skip=CKV_AWS_116: Dead-Letter-Handling - Come back to putting errors on a queue and notifying.
+	# checkov:skip=CKV_AWS_117: This isn't sensitive and we have no VPC's in play so do we really need to put it in a VPC?
+	# checkov:skip=CKV_AWS_173: we're ok to use the default service key for encryption https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function#kms_key_arn
+  # checkov:skip=CKV_AWS_272: Ensure AWS Lambda function is configured to validate code-signing - looking for a pattern to fix this
   function_name = local.lambda_function_name
 
   role = aws_iam_role.lambda.arn
@@ -29,13 +35,16 @@ resource "aws_lambda_function" "run_crawler" {
   filename         = data.archive_file.lambda.output_path
   source_code_hash = data.archive_file.lambda.output_base64sha256
   timeout          = 30
+  reserved_concurrent_executions = 5
 
   environment {
     variables = {
       CRAWLER_NAME = aws_glue_crawler.this.name
     }
   }
-
+   tracing_config {
+     mode = "Active"
+   }
   depends_on = [
     aws_iam_role_policy.lambda,
     aws_cloudwatch_log_group.lambda,
@@ -111,8 +120,11 @@ data "aws_iam_policy_document" "crawler_trigger" {
 # Otherwise it will be created by Lambda itself with infinite retention.
 #
 # Accept default encryption. This Lambda does not produce sensitive logs.
-# #tfsec:ignore:AWS089
+#tfsec:ignore:aws-cloudwatch-log-group-customer-key
+# checkov:skip=CKV_AWS_158: Not sensitive
+
 resource "aws_cloudwatch_log_group" "lambda" {
   name              = "/aws/lambda/${local.lambda_function_name}"
   retention_in_days = var.lambda_log_group_retention_days
+
 }

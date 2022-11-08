@@ -36,7 +36,8 @@ resource "aws_kms_key" "s3" {
   count = var.s3_use_existing_kms_key ? 0 : 1
 
   description = "For server-side encryption in the '${var.s3_bucket_name}' S3 bucket."
-
+  enable_key_rotation=true
+  
   tags = var.tags
 }
 
@@ -48,8 +49,11 @@ resource "aws_kms_alias" "s3" {
 }
 
 # Versioning and logging disabled.
-# tfsec:ignore:AWS077 tfsec:ignore:AWS002
+#tfsec:ignore:AWS002
 resource "aws_s3_bucket" "cur" {
+	# checkov:skip=CKV_AWS_144: We're not interested in crossing regions
+	# checkov:skip=CKV_AWS_18: logging disabled - access control to this data isn't scary
+	
   count = var.use_existing_s3_bucket ? 0 : 1
   bucket = var.s3_bucket_name
   tags = var.tags

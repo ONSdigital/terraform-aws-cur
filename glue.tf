@@ -6,10 +6,33 @@ locals {
 # Provisions Glue Crawler and Catalog Database.
 # Crawler will, when run, populate the Catalog Database with a table representing the CUR data in S3.
 
+resource "aws_glue_security_configuration" "gluesec" {
+  name = "gluesec1"
+
+  encryption_configuration {
+    cloudwatch_encryption {
+      cloudwatch_encryption_mode = "SSE-KMS"
+      kms_key_arn        = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
+    }
+
+    job_bookmarks_encryption {
+      job_bookmarks_encryption_mode = "CSE-KMS"
+      kms_key_arn        = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
+    }
+
+    s3_encryption {
+      kms_key_arn        = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
+      s3_encryption_mode = "SSE-KMS"
+    }
+  }
+}
+
+
 resource "aws_glue_crawler" "this" {
   name          = "cur-crawler"
   database_name = aws_glue_catalog_database.cur.name
   role          = aws_iam_role.crawler.name
+  security_configuration = aws_glue_security_configuration.gluesec
 
   s3_target {
     path = "s3://${var.s3_bucket_name}/${var.s3_bucket_prefix}/${var.report_name}/${var.report_name}"
@@ -132,10 +155,10 @@ data "aws_iam_policy_document" "crawler" {
 # This gives module consumers the option of letting this module create it/manage it.
 #
 # Accept default encryption. Crawler logs are not sensitive.
-# #tfsec:ignore:AWS089
+#tfsec:ignore:AWS089
 resource "aws_cloudwatch_log_group" "crawler" {
   count = var.glue_crawler_create_log_group ? 1 : 0
-
+  kms_key_id        = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
   name              = local.glue_log_group_default_name
   retention_in_days = var.glue_crawler_log_group_retention_days
 }
