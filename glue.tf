@@ -32,7 +32,7 @@ resource "aws_glue_crawler" "this" {
   name          = "cur-crawler"
   database_name = aws_glue_catalog_database.cur.name
   role          = aws_iam_role.crawler.name
-  security_configuration = aws_glue_security_configuration.gluesec
+  security_configuration = "gluesec1"
 
   s3_target {
     path = "s3://${var.s3_bucket_name}/${var.s3_bucket_prefix}/${var.report_name}/${var.report_name}"
@@ -104,6 +104,7 @@ data "aws_iam_policy_document" "crawler" {
       "glue:BatchGetPartition",
       "glue:UpdatePartition",
       "glue:BatchCreatePartition",
+      "glue:GetSecurityConfiguration",
     ]
 
     resources = [
