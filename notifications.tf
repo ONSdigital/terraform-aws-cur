@@ -110,6 +110,7 @@ data "aws_iam_policy_document" "crawler_trigger" {
 
     actions = [
       "glue:StartCrawler",
+      "glue:GetSecurityConfiguration",
     ]
 
     resources = [aws_glue_crawler.this.arn]
