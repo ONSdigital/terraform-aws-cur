@@ -11,18 +11,19 @@ resource "aws_glue_security_configuration" "gluesec" {
 
   encryption_configuration {
     cloudwatch_encryption {
-      cloudwatch_encryption_mode = "SSE-KMS"
-      kms_key_arn        = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
+        cloudwatch_encryption_mode = "DISABLED"
     }
 
     job_bookmarks_encryption {
       job_bookmarks_encryption_mode = "CSE-KMS"
       kms_key_arn        = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
+      #job_bookmarks_encryption_mode = "DISABLED"
     }
 
     s3_encryption {
       kms_key_arn        = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
       s3_encryption_mode = "SSE-KMS"
+      #s3_encryption_mode = "DISABLED"
     }
   }
 }
@@ -61,6 +62,11 @@ resource "aws_iam_role_policy" "crawler" {
   policy = data.aws_iam_policy_document.crawler.json
 }
 
+resource "aws_iam_role_policy_attachment" "glue_service" {
+  role   = aws_iam_role.crawler.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
+}
+
 data "aws_iam_policy_document" "crawler_assume" {
   statement {
     effect = "Allow"
@@ -89,7 +95,7 @@ data "aws_iam_policy_document" "crawler" {
     resources = [var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn]
   }
 
-  statement {
+/*   statement {
     sid = "Glue"
 
     effect = "Allow"
@@ -107,11 +113,10 @@ data "aws_iam_policy_document" "crawler" {
       "glue:GetSecurityConfiguration",
     ]
 
-    resources = [
-      aws_glue_catalog_database.cur.arn,
-      "arn:${data.aws_partition.current.partition}:glue:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:catalog",
-      "arn:${data.aws_partition.current.partition}:glue:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/${aws_glue_catalog_database.cur.name}/*",
-    ]
+    resources = [ 
+      "arn:${data.aws_partition.current.partition}:glue:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+      ,aws_glue_catalog_database.cur.arn 
+     ]
   }
 
   statement {
@@ -130,7 +135,7 @@ data "aws_iam_policy_document" "crawler" {
       "arn:${data.aws_partition.current.partition}:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:log-group:${local.glue_log_group_default_name}:log-stream:*",
     ]
   }
-
+ */
   statement {
     sid = "S3"
 
@@ -158,8 +163,8 @@ data "aws_iam_policy_document" "crawler" {
 # Accept default encryption. Crawler logs are not sensitive.
 #tfsec:ignore:AWS089
 resource "aws_cloudwatch_log_group" "crawler" {
+	# checkov:skip=CKV_AWS_158: No sensitive info held
   count = var.glue_crawler_create_log_group ? 1 : 0
-  kms_key_id        = var.s3_use_existing_kms_key ? data.aws_kms_key.s3[0].arn : aws_kms_key.s3[0].arn
   name              = local.glue_log_group_default_name
   retention_in_days = var.glue_crawler_log_group_retention_days
 }
