@@ -39,23 +39,23 @@ resource "aws_kms_key" "s3" {
   tags = var.tags
 }
 
-resource "aws_kms_alias" "s3" {
+/* resource "aws_kms_alias" "s3" {
   count = var.s3_use_existing_kms_key ? 0 : 1
 
   name          = "alias/${trimprefix(var.s3_kms_key_alias, "alias/")}"
-  target_key_id = aws_kms_key.s3[0].key_id
+  target_key_id = aws_kms_key.s3[0].arn
 }
-
+ */
 # Versioning and logging disabled.
 # tfsec:ignore:AWS077 tfsec:ignore:AWS002
 resource "aws_s3_bucket" "cur" {
-  count = var.use_existing_s3_bucket ? 0 : 1
+  count  = var.use_existing_s3_bucket ? 0 : 1
   bucket = var.s3_bucket_name
-  tags = var.tags
+  tags   = var.tags
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "cur_crypt" {
-  count = var.use_existing_s3_bucket ? 0 : 1
+  count  = var.use_existing_s3_bucket ? 0 : 1
   bucket = aws_s3_bucket.cur[0].bucket
   rule {
     apply_server_side_encryption_by_default {
@@ -66,18 +66,18 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cur_crypt" {
 }
 
 resource "aws_s3_bucket_versioning" "cur_version" {
-  count = var.use_existing_s3_bucket ? 0 : 1
+  count  = var.use_existing_s3_bucket ? 0 : 1
   bucket = aws_s3_bucket.cur[0].bucket
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_acl" "cur_acl" {
+/* resource "aws_s3_bucket_acl" "cur_acl" {
   count = var.use_existing_s3_bucket ? 0 : 1
   bucket = aws_s3_bucket.cur[0].id
   acl    = "private"
-}
+} */
 
 resource "aws_s3_bucket_public_access_block" "cur" {
   count = var.use_existing_s3_bucket ? 0 : 1

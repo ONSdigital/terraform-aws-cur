@@ -117,6 +117,7 @@ data "aws_iam_policy_document" "crawler" {
       "s3:ListBucket",
     ]
 
+    #tfsec:ignore:aws-iam-no-policy-wildcards - it's just this bucket
     resources = [
       "${var.use_existing_s3_bucket ? data.aws_s3_bucket.cur[0].arn : aws_s3_bucket.cur[0].arn}",
       "${var.use_existing_s3_bucket ? data.aws_s3_bucket.cur[0].arn : aws_s3_bucket.cur[0].arn}/*",
